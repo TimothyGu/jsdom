@@ -271,7 +271,7 @@ describe("Web Platform Tests", () => {
     "html/semantics/tabular-data/the-tr-element/insertCell.html",
     "html/semantics/tabular-data/the-tr-element/rowIndex.html",
     "html/semantics/tabular-data/the-tr-element/sectionRowIndex.html",
-    // "html/semantics/text-level-semantics/the-a-element/a-stringifier.html", // https://github.com/jsdom/webidl2js/issues/67
+    "html/semantics/text-level-semantics/the-a-element/a-stringifier.html",
     "html/semantics/text-level-semantics/the-a-element/a.rel-getter-01.html",
     "html/semantics/text-level-semantics/the-a-element/a.rel-setter-01.html",
     "html/semantics/text-level-semantics/the-a-element/a.text-getter-01.html",
