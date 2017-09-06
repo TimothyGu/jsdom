@@ -248,7 +248,6 @@ describe("Web Platform Tests", () => {
     "html/semantics/scripting-1/the-template-element/template-element/template-descendant-head.html",
     "html/semantics/tabular-data/attributes-common-to-td-and-th-elements/cellIndex.html",
     "html/semantics/tabular-data/the-caption-element/caption_001.html",
-    "html/semantics/tabular-data/the-col-element/caption_001.html",
     "html/semantics/tabular-data/the-table-element/caption-methods.html",
     "html/semantics/tabular-data/the-table-element/createTBody.html",
     "html/semantics/tabular-data/the-table-element/delete-caption.html",
