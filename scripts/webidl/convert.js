@@ -6,11 +6,13 @@ const path = require("path");
 const fs = require("fs");
 const rimraf = require("rimraf");
 
+const browserify = require("browserify");
 const Webidl2js = require("webidl2js");
 
 const transformer = new Webidl2js({
   implSuffix: "-impl",
-  suppressErrors: true
+  suppressErrors: true,
+  bundle: true
 });
 
 function addDir(dir) {
@@ -37,6 +39,19 @@ rimraf.sync(outputDir);
 fs.mkdirSync(outputDir);
 
 transformer.generate(outputDir)
+  .then(() => new Promise((resolve, reject) => {
+    const bundler = browserify();
+    bundler.add(path.resolve(__dirname, "../../lib/jsdom/living/generated/bundle-entry.js"));
+    const outStream = fs.createWriteStream(path.resolve(__dirname, "../../lib/jsdom/living/generated/bundle.js"));
+    outStream.on("error", reject);
+    outStream.write("(function (binding) {", "utf8");
+    const bundleStream = bundler.bundle();
+    bundleStream.on("error", reject);
+    bundleStream.pipe(outStream, { end: false });
+    bundleStream.on("end", () => {
+      outStream.end("})", "utf8", resolve);
+    });
+  }))
   .catch(err => {
     console.error(err);
     process.exit(1);
