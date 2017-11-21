@@ -57,7 +57,7 @@ describe("level2/events", () => {
   // @see http://www.w3.org/TR/DOM-Level-2-Events/events#Events-DocumentEvent
   specify('DocumentEvent interface', () => {
     var doc = require('../level1/core/files/hc_staff.xml').hc_staff();
-    assert.ok((doc.createEvent instanceof Function), "should have createEvent function");
+    assert.ok((typeof doc.createEvent === "function"), "should have createEvent function");
   });
 
   // A document is created using implementation.createDocument and cast to a EventTarget interface.
@@ -96,7 +96,7 @@ describe("level2/events", () => {
     function testEventConstructor(Constructor) {
       assert.throws(function () {
         new Constructor('myevent', 'not a dictionary');
-      }, TypeError);
+      });
 
       var event = new Constructor('myevent');
       assert.equal(event.bubbles, false);
