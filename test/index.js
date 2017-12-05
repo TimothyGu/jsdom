@@ -19,7 +19,6 @@ require("./old-api/cookie.js");
 require("./old-api/env.js");
 require("./old-api/inside-worker-smoke-tests.js");
 require("./old-api/keep-alive-connections.js");
-require("./old-api/named-properties-tracker.js");
 require("./old-api/resource-loading.js");
 require("./old-api/utils.js");
 
