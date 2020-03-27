@@ -5,6 +5,7 @@
 const path = require("path");
 const fs = require("fs");
 const rimraf = require("rimraf");
+const { XLINK_NS } = require("../../lib/jsdom/living/helpers/namespaces");
 
 const Webidl2js = require("webidl2js");
 
@@ -39,11 +40,14 @@ const transformer = new Webidl2js({
     `;
   },
   // https://html.spec.whatwg.org/multipage/common-dom-interfaces.html#reflecting-content-attributes-in-idl-attributes
+  // https://svgwg.org/svg2-draft/types.html#TermReflect
   processReflect(idl, implObj) {
     const reflectAttr = idl.extAttrs.find(attr => attr.name === "Reflect");
     const attrName = (reflectAttr && reflectAttr.rhs && JSON.parse(reflectAttr.rhs.value)) || idl.name.toLowerCase();
 
     if (idl.extAttrs.find(attr => attr.name === "ReflectURL")) {
+      checkAttributeNamespace(attrName);
+
       // Allow DOMString also due to https://github.com/whatwg/html/issues/5241.
       if (!isSimpleIDLType(idl.idlType, "USVString") && !isSimpleIDLType(idl.idlType, "DOMString")) {
         throw new Error("[ReflectURL] specified on non-USV/DOMString attribute");
@@ -70,6 +74,8 @@ const transformer = new Webidl2js({
     }
 
     if (isSimpleIDLType(idl.idlType, "DOMString") || isSimpleIDLType(idl.idlType, "USVString")) {
+      checkAttributeNamespace(attrName);
+
       const isUSV = isSimpleIDLType(idl.idlType, "USVString");
       return {
         get: `
@@ -83,6 +89,8 @@ const transformer = new Webidl2js({
     }
 
     if (isSimpleIDLType(idl.idlType, "boolean")) {
+      checkAttributeNamespace(attrName);
+
       return {
         get: `
           return ${implObj}.hasAttributeNS(null, "${attrName}");
@@ -99,6 +107,7 @@ const transformer = new Webidl2js({
 
     if (isSimpleIDLType(idl.idlType, "long")) {
       const parseInteger = this.addImport("../helpers/strings", "parseInteger");
+      checkAttributeNamespace(attrName);
 
       return {
         get: `
@@ -117,6 +126,7 @@ const transformer = new Webidl2js({
 
     if (isSimpleIDLType(idl.idlType, "unsigned long")) {
       const parseNonNegativeInteger = this.addImport("../helpers/strings", "parseNonNegativeInteger");
+      checkAttributeNamespace(attrName);
 
       return {
         get: `
@@ -134,7 +144,97 @@ const transformer = new Webidl2js({
       };
     }
 
+    if (isSimpleIDLType(idl.idlType, "SVGAnimatedString")) {
+      const SVGAnimatedString = this.addImport("./SVGAnimatedString");
+      checkAttributeNamespace(attrName);
+      const deprecatedAttr = extractAttributeInfo(getExtAttrValue("ReflectDeprecated"));
+      const initialValue = getExtAttrValue("ReflectInitial");
+      if (initialValue !== undefined && typeof initialValue !== "string") {
+        throw new Error("Initial value of SVGAnimatedString must be a string");
+      }
+
+      return {
+        get: `
+          return ${SVGAnimatedString}.create(globalObject, [], {
+            element: ${implObj},
+            attribute: "${attrName}",
+            ${deprecatedAttr !== undefined ?
+              `attributeDeprecatedNamespace: ${JSON.stringify(deprecatedAttr.ns)},
+               attributeDeprecated: ${JSON.stringify(deprecatedAttr.name)},` :
+              ""}
+            ${initialValue !== undefined ?
+              `initialValue: ${JSON.stringify(initialValue)},` :
+              ""}
+          });
+        `
+      };
+    }
+
+    if (isSimpleIDLType(idl.idlType, "SVGAnimatedPreserveAspectRatio")) {
+      const SVGAnimatedPreserveAspectRatio = this.addImport("./SVGAnimatedPreserveAspectRatio");
+      if (attrName !== "preserveAspectRatio") {
+        throw new Error("SVGAnimatedPreserveAspectRatio can only be used with the preserveAspectRatio attribute");
+      }
+
+      return {
+        get: `
+          return ${SVGAnimatedPreserveAspectRatio}.create(globalObject, [], {
+            element: ${implObj}
+          });
+        `
+      };
+    }
+
+    if (isSimpleIDLType(idl.idlType, "SVGAnimatedRect")) {
+      const SVGAnimatedRect = this.addImport("./SVGAnimatedRect");
+      checkAttributeNamespace(attrName);
+
+      return {
+        get: `
+          return ${SVGAnimatedRect}.create(globalObject, [], {
+            element: ${implObj},
+            attribute: "${attrName}"
+          });
+        `
+      };
+    }
+
     throw new Error("Unrecognized reflection type " + idl.idlType.idlType);
+
+    function getExtAttrValue(extAttrName) {
+      const reflectDeprecatedAttr = idl.extAttrs.find(extAttr => extAttr.name === extAttrName);
+      if (reflectDeprecatedAttr) {
+        return JSON.parse(reflectDeprecatedAttr.rhs.value);
+      }
+      return undefined;
+    }
+
+    function checkAttributeNamespace(attr) {
+      if (attr.includes(":")) {
+        throw new Error(`Namespace not supported for attribute ${attr}`);
+      }
+    }
+
+    function extractAttributeInfo(attr) {
+      if (attr === undefined) {
+        return undefined;
+      }
+
+      const parts = attr.split(":");
+      if (parts.length === 1) {
+        return { ns: null, name: parts[0] };
+      }
+      if (parts.length === 2) {
+        let ns;
+        if (parts[0] === "xlink") {
+          ns = XLINK_NS;
+        } else {
+          throw new Error(`Unrecognized attribute namespace name ${parts[0]}`);
+        }
+        return { ns, name: parts[1] };
+      }
+      throw new Error(`Invalid attribute "${attr}"`);
+    }
   }
 });
 
@@ -152,6 +252,7 @@ addDir("../../lib/jsdom/living/domparsing");
 addDir("../../lib/jsdom/living/events");
 addDir("../../lib/jsdom/living/fetch");
 addDir("../../lib/jsdom/living/file-api");
+addDir("../../lib/jsdom/living/geometry");
 addDir("../../lib/jsdom/living/hr-time");
 addDir("../../lib/jsdom/living/mutation-observer");
 addDir("../../lib/jsdom/living/navigator");
